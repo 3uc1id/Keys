@@ -39,10 +39,18 @@ class App:
             self.white_keys.append(white_key_i)
             self.canvas.tag_bind(white_key_i,
                                  '<ButtonPress-1>',
-                                 self.on_key_press)
+                                 self.on_button_press)
             self.canvas.tag_bind(white_key_i,
                                  '<ButtonRelease-1>',
-                                 self.on_key_release)
+                                 self.on_button_release)
+        
+        #keyboard bindings to white piano keys
+        self.white_key_letter_bindings = 'asdfghjk'
+        for letter, tag in zip(self.white_key_letter_bindings, self.white_keys):
+            note = self.canvas.gettags(tag)[0]
+            #print('binding', self.canvas.gettags(tag)[0], 'to letter', letter)
+            self.root.bind(f'<KeyPress-{letter}>', self.on_key_press(tag, note))
+            self.root.bind(f'<KeyRelease-{letter}>', self.on_key_release(tag, note))
 
         self.black_keys = []
         for offset in range(octave_count):
@@ -58,33 +66,61 @@ class App:
                 self.black_keys.append(black_key_i)
                 self.canvas.tag_bind(black_key_i,
                                      '<ButtonPress-1>',
-                                     self.on_key_press)
+                                     self.on_button_press)
                 self.canvas.tag_bind(black_key_i,
                                      '<ButtonRelease-1>',
-                                     self.on_key_release)
+                                     self.on_button_release)
+
+        #keyboard bindings to black piano keys       
+        self.black_key_letter_bindings = 'wetyu'
+        for letter, tag in zip(self.black_key_letter_bindings, self.black_keys):
+            note = self.canvas.gettags(tag)[0]
+            self.root.bind(f'<KeyPress-{letter}>', self.on_key_press(tag, note))
+            self.root.bind(f'<KeyRelease-{letter}>', self.on_key_release(tag, note))
+
+        #self.canvas.bind('<Enter>', lambda event: print('setting canvas focus') or self.canvas.focus_set())
 
         self.canvas.pack()
+        #self.canvas.focus_set()
+        self.root.focus_set()
         self.synth_thread = SoundSynthesizer()
         self.root.protocol("WM_DELETE_WINDOW", lambda: self.synth_thread.stop() or self.synth_thread.join() or self.root.destroy())
 
-    def on_key_press(self, event):
+    def on_button_press(self, event):
         key_id = event.widget.find_withtag('current')[0]
         self.canvas.itemconfigure(key_id, outline='red')
         note = self.canvas.gettags(key_id)[0]
-        print('starting', note)
+        #print('starting', note)
         self.synth_thread.queue.put((SynthCommand.START_NOTE,
                                     (note,
                                      NOTE_TABLE[note],
                                      0.1)))
         
-
-    def on_key_release(self, event):
+    def on_button_release(self, event):
         key_id = event.widget.find_withtag('current')[0]
         self.canvas.itemconfigure(key_id, outline='black')
         note = self.canvas.gettags(key_id)[0]
-        print('ending', note)
+        #print('ending', note)
         self.synth_thread.queue.put((SynthCommand.STOP_NOTE,
                                     (note,)))
+        
+    def on_key_press(self, key_id, note):
+        def handler(event):
+            self.canvas.itemconfigure(key_id, outline='red')
+            #print('starting', note)
+            self.synth_thread.queue.put((SynthCommand.START_NOTE,
+                                         (note,
+                                          NOTE_TABLE[note],
+                                          0.1)))
+        return handler
+    
+    def on_key_release(self, key_id, note):
+        def handler(event):
+            self.canvas.itemconfigure(key_id, outline='black')
+            #print('ending', note)
+            self.synth_thread.queue.put((SynthCommand.STOP_NOTE,
+                                         (note,)))
+        return handler
 
     def run(self):
         self.synth_thread.start()

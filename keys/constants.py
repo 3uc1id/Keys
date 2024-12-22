@@ -2,7 +2,7 @@ from enum import IntEnum
 from math import tau as TAU
 
 F_SAMPLE = 44100
-BUFFLEN = 2048
+BUFFLEN = 256
 BUFFLEN_T = BUFFLEN / F_SAMPLE  # length of the buffer in seconds
 
 
